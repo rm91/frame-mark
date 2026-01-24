@@ -5,6 +5,15 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from "expo-status-bar";
+import {
+  ArrowCounterClockwise,
+  FastForward,
+  MapPin,
+  Pause,
+  Play,
+  Rewind,
+  Stop as StopIcon,
+} from "phosphor-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActionSheetIOS,
@@ -124,6 +133,7 @@ function Card({
 
 function PillButton({
   label,
+  leftIcon,
   onPress,
   variant = "secondary",
   disabled,
@@ -132,6 +142,7 @@ function PillButton({
   haptic = "none",
 }: {
   label: string;
+  leftIcon?: React.ReactNode;
   onPress: () => void;
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
@@ -186,19 +197,110 @@ function PillButton({
           { transform: [{ scale }] },
         ]}
       >
-        <Text
-          style={[
-            styles.pillText,
-            variant === "primary" && styles.pillTextOnPrimary,
-            variant === "danger" && styles.pillTextDanger,
-          ]}
-        >
-          {label}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {leftIcon ? <View style={{ marginTop: 1 }}>{leftIcon}</View> : null}
+          <Text
+            style={[
+              styles.pillText,
+              variant === "primary" && styles.pillTextOnPrimary,
+              variant === "danger" && styles.pillTextDanger,
+            ]}
+          >
+            {label}
+          </Text>
+        </View>
       </Animated.View>
     </Pressable>
   );
 }
+
+function IconButton({
+  icon,
+  onPress,
+  variant = "secondary",
+  disabled,
+  size = 56,
+  styles,
+  haptic = "light",
+}: {
+  icon: React.ReactNode;
+  onPress: () => void;
+  variant?: "primary" | "secondary" | "danger";
+  disabled?: boolean;
+  size?: number;
+  styles: any;
+  haptic?: HapticLevel;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const pressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      speed: 28,
+      bounciness: 0,
+    }).start();
+  };
+
+  const pressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 28,
+      bounciness: 0,
+    }).start();
+  };
+
+  const handlePress = async () => {
+    if (disabled) return;
+    await doHaptic(haptic);
+    onPress();
+  };
+
+  return (
+    <Pressable onPressIn={pressIn} onPressOut={pressOut} onPress={handlePress} disabled={disabled}>
+      <Animated.View
+        style={[
+          styles.iconBtn,
+          variant === "primary" && styles.iconBtnPrimary,
+          variant === "danger" && styles.iconBtnDanger,
+          disabled && { opacity: 0.55 },
+          { width: size, height: size, transform: [{ scale }] },
+        ]}
+      >
+        {icon}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function IconNudge({
+  icon,
+  label,
+  onPress,
+  styles,
+  haptic = "light",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+  styles: any;
+  haptic?: HapticLevel;
+}) {
+  return (
+    <View style={styles.nudgeWrap}>
+      <IconButton
+        styles={styles}
+        size={44}
+        icon={icon}
+        onPress={onPress}
+        haptic={haptic}
+      />
+      <Text style={styles.nudgeLabel}>{label}</Text>
+    </View>
+  );
+}
+
 
 function Divider({ style, styles }: { style?: any; styles: any }) {
   return <View style={[styles.divider, style]} />;
@@ -968,48 +1070,79 @@ const generateSummary = async () => {
             Start: <Text style={{ fontWeight: "800" }}>{startTC}</Text>
           </Text>
 
-          <View style={styles.row}>
-            <PillButton styles={styles}
-              label="Play"
-              onPress={play}
+          {/* Primary controls (Instagram-like) */}
+          <View style={[styles.row, { justifyContent: "center", gap: 18 }]}>
+            <IconButton
+              styles={styles}
               variant="primary"
-              style={{ flex: 1 }}
-            
+              icon={
+                playing ? (
+                  <Pause size={28} color="#FFFFFF" weight="bold" />
+                ) : (
+                  <Play size={28} color="#FFFFFF" weight="bold" />
+                )
+              }
+              onPress={playing ? stop : play}
               haptic="light"
             />
-            <PillButton styles={styles}
-              label="Stop"
+
+            <IconButton
+              styles={styles}
+              icon={<StopIcon size={26} color={ui.text} weight="bold" />}
               onPress={stop}
-              variant="secondary"
-              style={{ flex: 1 }}
-            
               haptic="light"
             />
-            <PillButton styles={styles}
-              label="Reset"
-              onPress={reset}
+
+            <IconButton
+              styles={styles}
               variant="danger"
-              style={{ flex: 1 }}
-            
+              icon={<ArrowCounterClockwise size={24} color={ui.danger} weight="bold" />}
+              onPress={reset}
               haptic="light"
             />
           </View>
 
-          <View style={styles.row}>
-            <PillButton styles={styles} label="-1s" onPress={() => adjust(-1)} style={{ flex: 1 }} />
-            <PillButton styles={styles} label="+1s" onPress={() => adjust(1)} style={{ flex: 1 }} />
-            <PillButton styles={styles} label="-5s" onPress={() => adjust(-5)} style={{ flex: 1 }} />
-            <PillButton styles={styles} label="+5s" onPress={() => adjust(5)} style={{ flex: 1 }} />
+          {/* Nudge controls */}
+          <View style={[styles.row, styles.nudgeRow]}>
+            <IconNudge
+              styles={styles}
+              icon={<Rewind size={20} color={ui.text} weight="bold" />}
+              label="-1s"
+              onPress={() => adjust(-1)}
+              haptic="light"
+            />
+            <IconNudge
+              styles={styles}
+              icon={<FastForward size={20} color={ui.text} weight="bold" />}
+              label="+1s"
+              onPress={() => adjust(1)}
+              haptic="light"
+            />
+            <IconNudge
+              styles={styles}
+              icon={<Rewind size={22} color={ui.text} weight="fill" />}
+              label="-5s"
+              onPress={() => adjust(-5)}
+              haptic="light"
+            />
+            <IconNudge
+              styles={styles}
+              icon={<FastForward size={22} color={ui.text} weight="fill" />}
+              label="+5s"
+              onPress={() => adjust(5)}
+              haptic="light"
+            />
           </View>
 
-          <PillButton styles={styles}
+          <PillButton
+            styles={styles}
             label="Cattura marker"
+            leftIcon={<MapPin size={18} color="#FFFFFF" weight="bold" />}
             onPress={capture}
             variant="primary"
-            style={{ marginTop: 12 }}
-          
-              haptic="medium"
-            />
+            style={{ marginTop: 14 }}
+            haptic="medium"
+          />
         </View>
 
         {/* SETTINGS */}
@@ -1438,6 +1571,25 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
 
     row: { flexDirection: "row", gap: 10, marginTop: 12 },
 
+    nudgeRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 20,          // ← regola qui quanto li vuoi compatti
+      marginTop: 14,
+    },
+
+    nudgeWrap: { alignItems: "center" },
+    nudgeLabel: {
+      marginTop: 6,
+      fontSize: 11,
+      fontWeight: "900",
+      color: UI.subtext,
+      letterSpacing: 0.2,
+      alignItems: "center",
+      gap : 2
+    },
+
+
     pillBtn: {
       paddingVertical: 12,
       paddingHorizontal: 12,
@@ -1469,6 +1621,29 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
       color: UI.danger,
       fontWeight: "800",
     },
+
+    iconBtn: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: UI.border,
+      backgroundColor: UI.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconBtnPrimary: {
+      backgroundColor: UI.primary,
+      borderColor: "rgba(45, 212, 191, 0.35)",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      elevation: 2,
+    },
+    iconBtnDanger: {
+      backgroundColor: "transparent",
+      borderColor: "rgba(239, 68, 68, 0.6)",
+    },
+
     sectionTitle: { fontWeight: "900", color: UI.text, fontSize: 16 },
     divider: { height: 1, backgroundColor: UI.divider, marginTop: 10 },
 
