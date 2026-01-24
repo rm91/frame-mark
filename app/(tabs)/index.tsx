@@ -31,8 +31,6 @@ type Marker = {
   frames: number;
   comment: string;
 };
-
-const GEMINI_KEY = process.env.EXPO_PUBLIC_GEMINI_KEY;
 const SCREEN_W = Dimensions.get("window").width;
 
 /* ---------- Timecode helpers ---------- */
@@ -774,64 +772,94 @@ const capture = () => {
 
   /* ---------- GEMINI SUMMARY ---------- */
 
-  const generateSummary = async () => {
-    if (markers.length === 0) {
-      Alert.alert("Riepilogo", "Nessun marker disponibile.");
-      return;
-    }
+const generateSummary = async () => {
 
-    if (!GEMINI_KEY) {
-      Alert.alert(
-        "Gemini API key mancante",
-        "Aggiungi EXPO_PUBLIC_GEMINI_KEY nel file .env e riavvia l'app."
-      );
-      return;
-    }
+  if (markers.length === 0) {
 
-    setLoadingSummary(true);
-    setSummary("");
+    Alert.alert("Riepilogo", "Nessun marker disponibile.");
 
-    const ordered =
-      sortMode === "timecode"
-        ? [...markers].sort((a, b) => a.frames - b.frames)
-        : markers;
+    return;
 
-    const text = ordered
-      .map((m) => `[${framesToTimecode(m.frames, fps)}] ${m.comment || ""}`)
-      .join("\n");
+  }
 
-    const prompt = `Riassumi i seguenti commenti di una sessione di screening video:\n${text}`;
 
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(
-          GEMINI_KEY
-        )}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-          }),
-        }
-      );
+  const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-      const data = await res.json();
 
-      const out =
-        data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-        data?.error?.message ||
-        "Errore durante la generazione.";
+  if (!BACKEND_URL) {
 
-      setSummary(out);
-    } catch {
-      setSummary("Errore di rete durante la chiamata a Gemini.");
-    } finally {
-      setLoadingSummary(false);
-    }
-  };
+    Alert.alert("Errore", "Backend non configurato. Imposta EXPO_PUBLIC_BACKEND_URL nel .env e riavvia Expo con -c.");
 
-  /* ---------- Markers ordinati per UI ---------- */
+    return;
+
+  }
+
+
+  setLoadingSummary(true);
+
+  setSummary("");
+
+
+  const ordered =
+
+    sortMode === "timecode"
+
+      ? [...markers].sort((a, b) => a.frames - b.frames)
+
+      : markers;
+
+
+  const text = ordered
+
+    .map((m) => `[${framesToTimecode(m.frames, fps)}] ${m.comment || ""}`)
+
+    .join("\n");
+
+
+  const prompt = `Riassumi i seguenti commenti di una sessione di screening video:\n${text}`;
+
+
+  try {
+
+    const res = await fetch(`${BACKEND_URL}/api/generate-summary`, {
+
+      method: "POST",
+
+      headers: { "Content-Type": "application/json" },
+
+      body: JSON.stringify({ prompt }),
+
+    });
+
+
+    const data = await res.json();
+
+
+    const out =
+
+      data?.summary ||
+
+      data?.error ||
+
+      "Errore durante la generazione.";
+
+
+    setSummary(out);
+
+  } catch {
+
+    setSummary("Errore di rete durante la chiamata al backend.");
+
+  } finally {
+
+    setLoadingSummary(false);
+
+  }
+
+};
+
+/* ---------- Markers ordinati per UI ---------- */
+
 
   const sortedMarkers = useMemo(() => {
     if (sortMode === "timecode") {
