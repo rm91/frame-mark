@@ -93,12 +93,12 @@ const PALETTE = {
     border: "rgba(255,255,255,0.12)",
     divider: "rgba(255,255,255,0.08)",
     surface: "#121212",
-    primary: "#3B82F6",
+    primary: "#2DD4BF", // teal/cyan pro
+    summaryBg: "rgba(45, 212, 191, 0.14)",
+    summaryBorder: "rgba(45, 212, 191, 0.28)",
     danger: "#EF4444",
     modal: "#0A0A0A",
     inputBg: "#0E0E0E",
-    summaryBg: "rgba(37, 99, 235, 0.18)",
-    summaryBorder: "rgba(37, 99, 235, 0.35)",
     overlay: "rgba(0,0,0,0.7)",
     placeholder: "rgba(255,255,255,0.35)",
   },
@@ -150,7 +150,8 @@ function PillButton({
       <Text
         style={[
           styles.pillText,
-          variant !== "secondary" && { color: "white", fontWeight: "800" },
+          variant === "primary" && styles.pillTextOnPrimary,
+          variant === "danger" && styles.pillTextDanger,
         ]}
       >
         {label}
@@ -897,7 +898,7 @@ const generateSummary = async () => {
         
 
         {/* TIMECODE */}
-        <Card styles={styles}>
+<View style={styles.hero}>
           <Text style={styles.tc}>{framesToTimecode(frames, fps)}</Text>
           <Text style={styles.tcHint}>
             Start: <Text style={{ fontWeight: "800" }}>{startTC}</Text>
@@ -937,7 +938,7 @@ const generateSummary = async () => {
             variant="primary"
             style={{ marginTop: 12 }}
           />
-        </Card>
+        </View>
 
         {/* SETTINGS */}
         <Card styles={styles}>
@@ -1336,13 +1337,13 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
     },
 
     tc: {
-      fontSize: 38,
+      fontSize: 46,
       fontWeight: "900",
       textAlign: "center",
       color: UI.text,
-      letterSpacing: 1,
+      letterSpacing: 1.6,
     },
-    tcHint: { textAlign: "center", marginTop: 6, color: UI.subtext, fontSize: 12 },
+    tcHint: { textAlign: "center", marginTop: 6, color: UI.subtext, fontSize: 13 },
 
     row: { flexDirection: "row", gap: 10, marginTop: 12 },
 
@@ -1358,14 +1359,23 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
     },
     pillPrimary: {
       backgroundColor: UI.primary,
-      borderColor: "rgba(37, 99, 235, 0.25)",
+      borderColor: "rgba(45, 212, 191, 0.35)", // oppure lascia il tuo blu se non hai cambiato palette
+      shadowOpacity: 0.12,
+      shadowRadius: 12
     },
     pillDanger: {
-      backgroundColor: UI.danger,
-      borderColor: "rgba(239, 68, 68, 0.25)",
+      backgroundColor: "transparent",
+      borderColor: "rgba(239, 68, 68, 0.6)",
     },
     pillText: { color: UI.text, fontWeight: "800", fontSize: 13 },
-
+    pillTextOnPrimary: {
+      color: "#FFFFFF",
+      fontWeight: "800",
+    },
+    pillTextDanger: {
+      color: UI.danger,
+      fontWeight: "800",
+    },
     sectionTitle: { fontWeight: "900", color: UI.text, fontSize: 16 },
     divider: { height: 1, backgroundColor: UI.divider, marginTop: 10 },
 
@@ -1619,5 +1629,9 @@ fpsBadgeText: {
   color: UI.text,
   fontWeight: "800",
   fontSize: 12,
+},
+hero: {
+  marginBottom: 20,
+  paddingVertical: 8,
 },
 });
