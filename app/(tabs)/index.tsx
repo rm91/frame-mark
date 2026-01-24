@@ -564,6 +564,38 @@ export default function App() {
     };
   }, [playing, fps]);
 
+  const markerPulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    let loop: Animated.CompositeAnimation | null = null;
+
+    if (playing) {
+      loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(markerPulse, {
+            toValue: 1.08,
+            duration: 650,
+            useNativeDriver: true,
+          }),
+          Animated.timing(markerPulse, {
+            toValue: 1.0,
+            duration: 650,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      loop.start();
+    } else {
+      markerPulse.stopAnimation();
+      markerPulse.setValue(1);
+    }
+
+    return () => {
+      loop?.stop();
+    };
+  }, [playing, markerPulse]);
+
+
   /* ---------- Controls ---------- */
 
   const play = () => {
@@ -1086,7 +1118,7 @@ const generateSummary = async () => {
               haptic="light"
             />
 
-            
+         <Animated.View style={{ transform: [{ scale: markerPulse }] }}>   
             <IconButton
               styles={styles}
               variant="primary"
@@ -1094,7 +1126,8 @@ const generateSummary = async () => {
               onPress={capture}
               haptic="medium"
             />
-<IconButton
+          </Animated.View>
+          <IconButton
               styles={styles}
               icon={<StopIcon size={26} color={ui.text} weight="bold" />}
               onPress={stop}
