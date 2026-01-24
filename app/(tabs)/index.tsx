@@ -88,12 +88,12 @@ const PALETTE = {
     border: "rgba(15, 23, 42, 0.10)",
     divider: "rgba(15, 23, 42, 0.08)",
     surface: "#F6F7FB",
-    primary: "#2563EB",
+    primary: "#E6B94A",
     danger: "#EF4444",
     modal: "#FFFFFF",
     inputBg: "#FFFFFF",
-    summaryBg: "rgba(37, 99, 235, 0.06)",
-    summaryBorder: "rgba(37, 99, 235, 0.12)",
+    summaryBg: "rgba(230, 185, 74, 0.10)",
+    summaryBorder: "rgba(230, 185, 74, 0.20)",
     overlay: "rgba(0,0,0,0.28)",
     placeholder: "rgba(15, 23, 42, 0.35)",
   },
@@ -105,9 +105,9 @@ const PALETTE = {
     border: "rgba(255,255,255,0.12)",
     divider: "rgba(255,255,255,0.08)",
     surface: "#121212",
-    primary: "#2DD4BF", // teal/cyan pro
-    summaryBg: "rgba(45, 212, 191, 0.14)",
-    summaryBorder: "rgba(45, 212, 191, 0.28)",
+    primary: "#E3B74A", // golden amber
+    summaryBg: "rgba(245, 200, 76, 0.18)",
+    summaryBorder: "rgba(227, 183, 74, 0.35)",
     danger: "#EF4444",
     modal: "#0A0A0A",
     inputBg: "#0E0E0E",
@@ -1074,7 +1074,7 @@ const generateSummary = async () => {
           <View style={[styles.row, { justifyContent: "center", gap: 18 }]}>
             <IconButton
               styles={styles}
-              variant="primary"
+              variant="secondary"
               icon={
                 playing ? (
                   <Pause size={28} color="#FFFFFF" weight="bold" />
@@ -1086,7 +1086,15 @@ const generateSummary = async () => {
               haptic="light"
             />
 
+            
             <IconButton
+              styles={styles}
+              variant="primary"
+              icon={<MapPin size={26} color="#FFFFFF" weight="bold" />}
+              onPress={capture}
+              haptic="medium"
+            />
+<IconButton
               styles={styles}
               icon={<StopIcon size={26} color={ui.text} weight="bold" />}
               onPress={stop}
@@ -1095,8 +1103,8 @@ const generateSummary = async () => {
 
             <IconButton
               styles={styles}
-              variant="danger"
-              icon={<ArrowCounterClockwise size={24} color={ui.danger} weight="bold" />}
+              variant="secondary"
+              icon={<ArrowCounterClockwise size={24} color={ui.text} weight="bold" />}
               onPress={reset}
               haptic="light"
             />
@@ -1133,17 +1141,7 @@ const generateSummary = async () => {
               haptic="light"
             />
           </View>
-
-          <PillButton
-            styles={styles}
-            label="Cattura marker"
-            leftIcon={<MapPin size={18} color="#FFFFFF" weight="bold" />}
-            onPress={capture}
-            variant="primary"
-            style={{ marginTop: 14 }}
-            haptic="medium"
-          />
-        </View>
+</View>
 
         {/* SETTINGS */}
         <Card styles={styles}>
@@ -1604,7 +1602,7 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
       backgroundColor: UI.primary,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 8 },
-      borderColor: "rgba(45, 212, 191, 0.35)", // oppure lascia il tuo blu se non hai cambiato palette
+      borderColor: "rgba(227, 183, 74, 0.35)", // oppure lascia il tuo blu se non hai cambiato palette
       shadowOpacity: 0.12,
       shadowRadius: 12
     },
@@ -1632,7 +1630,7 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
     },
     iconBtnPrimary: {
       backgroundColor: UI.primary,
-      borderColor: "rgba(45, 212, 191, 0.35)",
+      borderColor: "rgba(227, 183, 74, 0.35)",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.12,
