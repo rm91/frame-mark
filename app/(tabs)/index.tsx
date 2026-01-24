@@ -1,5 +1,6 @@
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
+import * as Haptics from "expo-haptics";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,6 +9,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActionSheetIOS,
   Alert,
+  Animated,
   Dimensions,
   FlatList,
   Image,
@@ -20,6 +22,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Vibration,
   View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -126,6 +129,7 @@ function PillButton({
   disabled,
   style,
   styles,
+  haptic = "none",
 }: {
   label: string;
   onPress: () => void;
@@ -133,36 +137,92 @@ function PillButton({
   disabled?: boolean;
   style?: any;
   styles: any;
+  haptic?: HapticLevel;
 }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const pressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 28,
+      bounciness: 0,
+    }).start();
+  };
+
+  const pressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 28,
+      bounciness: 0,
+    }).start();
+  };
+
+  const handlePress = async () => {
+    if (disabled) return;
+    await doHaptic(haptic);
+    onPress();
+  };
+
+  // Mantiene compatibilità con l'uso attuale: molti bottoni passano style={{flex:1}}
+  const { flex, ...restStyle } = style || {};
+
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
+    <Pressable
+      onPressIn={pressIn}
+      onPressOut={pressOut}
+      onPress={handlePress}
       disabled={disabled}
-      style={[
-        styles.pillBtn,
-        variant === "primary" && styles.pillPrimary,
-        variant === "danger" && styles.pillDanger,
-        disabled && { opacity: 0.55 },
-        style,
-      ]}
+      style={flex !== undefined ? { flex } : undefined}
     >
-      <Text
+      <Animated.View
         style={[
-          styles.pillText,
-          variant === "primary" && styles.pillTextOnPrimary,
-          variant === "danger" && styles.pillTextDanger,
+          styles.pillBtn,
+          variant === "primary" && styles.pillPrimary,
+          variant === "danger" && styles.pillDanger,
+          disabled && { opacity: 0.55 },
+          restStyle,
+          { transform: [{ scale }] },
         ]}
       >
-        {label}
-      </Text>
-    </TouchableOpacity>
+        <Text
+          style={[
+            styles.pillText,
+            variant === "primary" && styles.pillTextOnPrimary,
+            variant === "danger" && styles.pillTextDanger,
+          ]}
+        >
+          {label}
+        </Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 function Divider({ style, styles }: { style?: any; styles: any }) {
   return <View style={[styles.divider, style]} />;
 }
+
+
+
+/* ---------- Motion & Haptics helpers ---------- */
+
+type HapticLevel = "none" | "light" | "medium";
+
+const doHaptic = async (level: HapticLevel) => {
+  if (level === "none") return;
+  try {
+    if (level === "light") {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  } catch {
+    // Fallback (device senza supporto / permessi): vibrazione breve
+    Vibration.vibrate(level === "medium" ? 18 : 10);
+  }
+};
 
 /* ---------- Wheel (custom, no native popups) ---------- */
 
@@ -880,7 +940,11 @@ const generateSummary = async () => {
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
           <Image
-            source={require("../../assets/images/header-dark.png")}
+            source={
+              theme === "dark"
+                ? require("../../assets/images/header-dark.png")
+                : require("../../assets/images/header-light.png")
+            }
             resizeMode="contain"
             style={styles.topBarLogo}
           />
@@ -910,18 +974,24 @@ const generateSummary = async () => {
               onPress={play}
               variant="primary"
               style={{ flex: 1 }}
+            
+              haptic="light"
             />
             <PillButton styles={styles}
               label="Stop"
               onPress={stop}
               variant="secondary"
               style={{ flex: 1 }}
+            
+              haptic="light"
             />
             <PillButton styles={styles}
               label="Reset"
               onPress={reset}
               variant="danger"
               style={{ flex: 1 }}
+            
+              haptic="light"
             />
           </View>
 
@@ -937,7 +1007,9 @@ const generateSummary = async () => {
             onPress={capture}
             variant="primary"
             style={{ marginTop: 12 }}
-          />
+          
+              haptic="medium"
+            />
         </View>
 
         {/* SETTINGS */}
@@ -949,6 +1021,17 @@ const generateSummary = async () => {
             <Switch
               value={theme === "dark"}
               onValueChange={(v) => setTheme(v ? "dark" : "light")}
+              trackColor={{
+                false: ui.border,
+                true: ui.primary,
+              }}
+              thumbColor={
+                Platform.OS === "android"
+                  ? theme === "dark"
+                    ? "#FFFFFF"
+                    : "#E5E7EB"
+                  : undefined
+              }
             />
           </View>
           <Divider styles={styles} />
@@ -1089,11 +1172,13 @@ const generateSummary = async () => {
                 onPress={onPressExport}
                 variant="primary"
                 style={{ marginTop: 12 }}
-              />
+              
+              haptic="light"
+            />
               <PillButton styles={styles}
                 label={loadingSummary ? "Generazione…" : "Genera riepilogo"}
                 onPress={generateSummary}
-                variant="primary"
+                variant="secondary"
                 disabled={loadingSummary}
                 style={{ marginTop: 10 }}
               />
@@ -1155,6 +1240,8 @@ const generateSummary = async () => {
               onPress={confirmNameModal}
               variant="primary"
               style={{ marginTop: 10 }}
+            
+              haptic="light"
             />
           </View>
         </View>
@@ -1254,6 +1341,8 @@ const generateSummary = async () => {
               onPress={confirmTcModal}
               variant="primary"
               style={{ marginTop: 12 }}
+            
+              haptic="light"
             />
           </View>
         </View>
@@ -1288,6 +1377,8 @@ const generateSummary = async () => {
               onPress={saveComment}
               variant="primary"
               style={{ marginTop: 10 }}
+            
+              haptic="light"
             />
           </View>
         </View>
@@ -1359,6 +1450,8 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
     },
     pillPrimary: {
       backgroundColor: UI.primary,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 8 },
       borderColor: "rgba(45, 212, 191, 0.35)", // oppure lascia il tuo blu se non hai cambiato palette
       shadowOpacity: 0.12,
       shadowRadius: 12
@@ -1614,6 +1707,7 @@ topBarLeft: {
 topBarLogo: {
   width: 120,
   height: 100,
+  marginTop: 15, // prova 4–8 px
 },
 
 topBarRight: {
@@ -1631,7 +1725,7 @@ fpsBadgeText: {
   fontSize: 12,
 },
 hero: {
-  marginBottom: 20,
+  marginBottom: 28,
   paddingVertical: 8,
 },
 });
