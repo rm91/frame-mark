@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import {
   ArrowCounterClockwise,
   ArrowLeft,
+  DownloadSimple,
   FastForward,
   Gear,
   House,
@@ -16,7 +17,9 @@ import {
   PencilSimple,
   Play,
   Rewind,
+  Sparkle,
   Stop as StopIcon,
+  Trash
 } from "phosphor-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -665,6 +668,28 @@ const capture = () => {
     setComment("");
   };
 
+  const deleteMarker = (marker: Marker) => {
+    const tc = framesToTimecode(marker.frames, fps);
+    Alert.alert(
+      "Elimina marker",
+      `Vuoi eliminare il marker a ${tc}?`,
+      [
+        { text: "Annulla", style: "cancel" },
+        {
+          text: "Elimina",
+          style: "destructive",
+          onPress: () => {
+            setMarkers((prev) => prev.filter((m) => m.id !== marker.id));
+            if (editing?.id === marker.id) {
+              setEditing(null);
+              setComment("");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const buildMarkersText = () => {
     const ordered =
       sortMode === "timecode"
@@ -1198,9 +1223,45 @@ const generateSummary = async () => {
         {/* MARKERS */}
         <Card styles={styles}>
           <View style={styles.markerHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text style={styles.sectionTitle}>Markers</Text>
             <Text style={styles.count}>{markers.length}</Text>
           </View>
+
+          <View style={{ flexDirection: "row", gap: 6 }}>
+            {/* ESPORTA */}
+            <IconButton
+              styles={styles}
+              size={36}
+              icon={
+                <DownloadSimple
+                  size={20}
+                  color={ui.primary}
+                  weight="bold"
+                />
+              }
+              onPress={onPressExport}
+              haptic="light"
+            />
+
+            {/* GENERA RIEPILOGO */}
+            <IconButton
+              styles={styles}
+              size={36}
+              icon={
+                <Sparkle
+                  size={20}
+                  color={ui.primary}
+                  weight="bold"
+                />
+              }
+              onPress={generateSummary}
+              disabled={loadingSummary || markers.length === 0}
+              haptic="light"
+            />
+          </View>
+        </View>
+
 
           <Divider styles={styles} />
 
@@ -1249,68 +1310,50 @@ const generateSummary = async () => {
           )}
 
           {sortedMarkers.map((m, index) => (
-            <TouchableOpacity
-              key={m.id}
-              activeOpacity={0.85}
-              style={styles.markerRow}
-              onPress={() => {
-                setEditing(m);
-                setComment(m.comment);
-              }}
-            >
+            <View key={m.id} style={styles.markerRow}>
               {/* NUMERINO A SINISTRA */}
               <View style={styles.markerIndex}>
                 <Text style={styles.markerIndexText}>{index + 1}</Text>
               </View>
 
               {/* TC + COMMENTO */}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.markerTc}>{framesToTimecode(m.frames, fps)}</Text>
-                <Text style={styles.markerComment} numberOfLines={1}>
-                  {m.comment?.trim() ? m.comment : "Aggiungi un commento…"}
-                </Text>
-              </View>
-
-              <IconButton
-                styles={styles}
-                size={36}
-                icon={
-                  <PencilSimple
-                    size={20}
-                    color={ui.primary}
-                    weight="bold"
-                  />
-                }
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={{ flex: 1 }}
                 onPress={() => {
                   setEditing(m);
                   setComment(m.comment);
                 }}
-                haptic="light"
-              />
-            </TouchableOpacity>
-          ))}
+              >
+                <Text style={styles.markerTc}>{framesToTimecode(m.frames, fps)}</Text>
+                <Text style={styles.markerComment} numberOfLines={1}>
+                  {m.comment?.trim() ? m.comment : "Aggiungi un commento…"}
+                </Text>
+              </TouchableOpacity>
 
-          {markers.length > 0 && (
-            <>
-              <Divider styles={styles} style={{ marginTop: 6 }} />
-              <PillButton
-                styles={styles}
-                label="Esporta"
-                onPress={onPressExport}
-                variant="primary"
-                style={{ marginTop: 12 }}
-              
-              haptic="light"
-            />
-              <PillButton styles={styles}
-                label={loadingSummary ? "Generazione…" : "Genera riepilogo"}
-                onPress={generateSummary}
-                variant="secondary"
-                disabled={loadingSummary}
-                style={{ marginTop: 10 }}
-              />
-            </>
-          )}
+              <View style={styles.markerActions}>
+                <IconButton
+                  styles={styles}
+                  flat
+                  size={34}
+                  icon={<PencilSimple size={20} color={ui.primary} weight="bold" />}
+                  onPress={() => {
+                    setEditing(m);
+                    setComment(m.comment);
+                  }}
+                  haptic="light"
+                />
+                <IconButton
+                  styles={styles}
+                  flat
+                  size={34}
+                  icon={<Trash size={20} color={ui.primary} weight="bold" />}
+                  onPress={() => deleteMarker(m)}
+                  haptic="medium"
+                />
+              </View>
+            </View>
+          ))}
 
           {loadingSummary && (
             <Text style={{ marginTop: 10, color: ui.subtext }}>
@@ -1333,6 +1376,9 @@ const generateSummary = async () => {
       >
 
         {/* SETTINGS */}
+                <Card styles={styles}>
+                  <Text style={styles.sectionTitle}>Impostazioni</Text>
+
                   <View style={styles.toggleRow}>
                     <Text style={styles.toggleText}>Tema scuro</Text>
                     <Switch
@@ -1388,7 +1434,7 @@ const generateSummary = async () => {
                     </View>
                   </View>
 
-                  <Divider styles={styles} />
+
                   <View style={styles.field}>
                     <Text style={styles.label}>Start Timecode</Text>
                     <Pressable onPress={openTcModal} style={styles.input}>
@@ -1397,7 +1443,10 @@ const generateSummary = async () => {
                         Tocca per impostare (HH:MM:SS:FF)
                       </Text>
                     </Pressable>
-                  </View>     
+                  </View>
+                </Card>
+
+        
       </ScrollView>
     )}
 
@@ -1781,6 +1830,12 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
       alignItems: "center",
       gap: 12,
       paddingVertical: 12,
+    },
+    markerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginLeft: 8,
     },
     markerTc: { fontWeight: "900", color: UI.text },
     markerComment: { marginTop: 2, color: UI.subtext, fontSize: 13 },
