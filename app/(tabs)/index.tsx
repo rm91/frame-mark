@@ -8,6 +8,8 @@ import { StatusBar } from "expo-status-bar";
 import {
   ArrowCounterClockwise,
   FastForward,
+  Gear,
+  House,
   MapPin,
   Pause,
   Play,
@@ -222,6 +224,7 @@ function IconButton({
   size = 56,
   styles,
   haptic = "light",
+  flat = false,
 }: {
   icon: React.ReactNode;
   onPress: () => void;
@@ -230,6 +233,7 @@ function IconButton({
   size?: number;
   styles: any;
   haptic?: HapticLevel;
+  flat?: boolean;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -262,6 +266,7 @@ function IconButton({
       <Animated.View
         style={[
           styles.iconBtn,
+          flat && styles.bottomIconBtn,
           variant === "primary" && styles.iconBtnPrimary,
           variant === "danger" && styles.iconBtnDanger,
           disabled && { opacity: 0.55 },
@@ -1547,6 +1552,32 @@ const generateSummary = async () => {
           </View>
         </View>
       </Modal>
+
+      {/* BOTTOM BAR */}
+      <View style={styles.bottomBar}>
+        <IconButton
+          styles={styles}
+          flat
+          size={48}
+          icon={<House size={22} color={ui.text} weight="bold" />}
+          onPress={() => {
+            // TODO: navigazione Home
+          }}
+          haptic="light"
+        />
+
+        <IconButton
+          styles={styles}
+          flat
+          size={48}
+          icon={<Gear size={22} color={ui.text} weight="bold" />}
+          onPress={() => {
+            // TODO: navigazione Impostazioni
+          }}
+          haptic="light"
+        />
+      </View>
+
     </SafeAreaView>
   );
 }
@@ -1556,7 +1587,7 @@ const generateSummary = async () => {
 const createStyles = (UI: ReturnType<typeof getUi>) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: UI.bg },
-    content: { padding: 16, paddingTop: 12, paddingBottom: 28 },
+    content: { padding: 16, paddingTop: 12, paddingBottom: 100 },
 
     header: {
       flexDirection: "row",
@@ -1673,6 +1704,13 @@ const createStyles = (UI: ReturnType<typeof getUi>) =>
     iconBtnDanger: {
       backgroundColor: "transparent",
       borderColor: "rgba(239, 68, 68, 0.6)",
+    },
+
+    // Flat style for bottom navigation icons (no round border/background)
+    bottomIconBtn: {
+      borderRadius: 0,
+      borderWidth: 0,
+      backgroundColor: "transparent",
     },
 
     sectionTitle: { fontWeight: "900", color: UI.text, fontSize: 16 },
@@ -1934,4 +1972,19 @@ hero: {
   marginBottom: 28,
   paddingVertical: 8,
 },
+
+    bottomBar: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 72,
+      flexDirection: "row",
+      justifyContent: "space-evenly",
+      alignItems: "center",
+      backgroundColor: UI.bg,
+      borderTopWidth: 1,
+      borderTopColor: UI.border,
+      paddingBottom: Platform.OS === "ios" ? 12 : 8,
+    },
 });
