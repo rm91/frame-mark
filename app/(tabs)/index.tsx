@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
@@ -51,6 +52,8 @@ type Marker = {
   comment: string;
 };
 const SCREEN_W = Dimensions.get("window").width;
+
+const TOUR_FIRST_RUN_KEY = "framemark:tutorialDone";
 
 /* ---------- Timecode helpers ---------- */
 
@@ -492,6 +495,26 @@ export default function App() {
     return () => { mounted = false; };
   }, []);
 
+// Primo avvio: mostra il tutorial spotlight
+useEffect(() => {
+  (async () => {
+    try {
+      const v = await AsyncStorage.getItem(TOUR_FIRST_RUN_KEY);
+      if (v !== "1") {
+        // piccola attesa per far montare la UI prima della misura
+        setTimeout(() => {
+          startTour();
+        }, 250);
+      }
+    } catch {
+      // se AsyncStorage fallisce, non bloccare l'app
+    }
+  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+// Misura l'elemento evidenziato ad ogni step/pagina/tema
+
   const [fps, setFps] = useState(24);
   const [startTC, setStartTC] = useState("01:00:00:00");
   const [frames, setFrames] = useState(timecodeToFrames("01:00:00:00", 24));
@@ -505,6 +528,126 @@ export default function App() {
   const [sortMode, setSortMode] = useState<"created" | "timecode">("timecode");
 
   const [page, setPage] = useState<"home" | "settings">("home");
+
+// Tutorial spotlight (primo avvio)
+const [tourVisible, setTourVisible] = useState(false);
+const [tourStep, setTourStep] = useState(0);
+const [tourRect, setTourRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+
+const playAnchorRef = useRef<View>(null);
+const captureAnchorRef = useRef<View>(null);
+const exportAnchorRef = useRef<View>(null);
+const geminiAnchorRef = useRef<View>(null);
+const homeAnchorRef = useRef<View>(null);
+const settingsAnchorRef = useRef<View>(null);
+
+const tourSteps = useMemo(
+  () => [
+        {
+      title: "Benvenuto in FrameMark",
+      text: "Ti faccio vedere velocemente i comandi principali. Puoi saltare in qualsiasi momento.",
+      ref: null as any,
+      page: "home" as const,
+    },
+{
+      title: "Play / Pausa",
+      text: "Avvia o metti in pausa il timer in timecode.",
+      ref: playAnchorRef,
+      page: "home" as const,
+    },
+    {
+      title: "Cattura marker",
+      text: "Tocca qui per catturare un marker al timecode corrente.",
+      ref: captureAnchorRef,
+      page: "home" as const,
+    },
+    {
+      title: "Esporta",
+      text: "Esporta i markers in TXT/PDF oppure copiali negli appunti.",
+      ref: exportAnchorRef,
+      page: "home" as const,
+    },
+    {
+      title: "Riepilogo (Gemini)",
+      text: "Genera un riepilogo automatico dei commenti inseriti sui markers.",
+      ref: geminiAnchorRef,
+      page: "home" as const,
+    },
+    {
+      title: "Home",
+      text: "Torna rapidamente alla schermata principale.",
+      ref: homeAnchorRef,
+      page: "home" as const,
+    },
+    {
+      title: "Impostazioni",
+      text: "Cambia tema, FPS e start timecode.",
+      ref: settingsAnchorRef,
+      page: "settings" as const,
+    },
+  ],
+  []
+);
+
+// Misura/aggiorna rettangolo spotlight quando il tour è visibile
+useEffect(() => {
+  if (!tourVisible) return;
+
+  const step = tourSteps[tourStep];
+  if (!step) return;
+
+  // Step 0: benvenuto centrato (nessuno spotlight)
+  if (tourStep === 0) {
+    if (tourRect) setTourRect(null);
+    return;
+  }
+
+  // se lo step richiede un'altra pagina, spostati lì
+  if (page !== step.page) {
+    setPage(step.page);
+    return;
+  }
+
+  const ref = step.ref?.current as any;
+  if (!ref?.measureInWindow) return;
+
+  let rAF: number | null = null;
+  rAF = requestAnimationFrame(() => {
+    ref.measureInWindow((x: number, y: number, width: number, height: number) => {
+      if (width > 0 && height > 0) setTourRect({ x, y, width, height });
+    });
+  });
+
+  return () => {
+    if (rAF !== null) cancelAnimationFrame(rAF);
+  };
+}, [tourVisible, tourStep, page, theme, tourSteps]);
+
+
+const finishTour = async () => {
+  setTourVisible(false);
+  setTourRect(null);
+  setPage("home");
+  setTourStep(0);
+  try {
+    await AsyncStorage.setItem(TOUR_FIRST_RUN_KEY, "1");
+  } catch {
+    // ignore
+  }
+};
+
+const startTour = async () => {
+  // forza avvio da home per garantire che i controlli esistano
+  setPage("home");
+  setTourStep(0);
+  setTourRect(null);
+  setTourVisible(true);
+};
+
+const skipTour = async () => {
+  await finishTour();
+};
 
   // Start Timecode picker modal (HH:MM:SS:FF) - evita tastiera
   const [tcModalOpen, setTcModalOpen] = useState(false);
@@ -1132,7 +1275,7 @@ const generateSummary = async () => {
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
           {page === "home" ? (
-          <Image
+                    <Image
             source={
               theme === "dark"
                 ? require("../../assets/images/header-dark.png")
@@ -1172,6 +1315,7 @@ const generateSummary = async () => {
 
           {/* Primary controls (Instagram-like) */}
           <View style={[styles.row, { justifyContent: "center", gap: 18 }]}>
+<View ref={playAnchorRef} collapsable={false}>
             <IconButton
               styles={styles}
               variant="secondary"
@@ -1185,16 +1329,19 @@ const generateSummary = async () => {
               onPress={playing ? stop : play}
               haptic="light"
             />
+</View>
 
-         <Animated.View style={{ transform: [{ scale: markerPulse }] }}>   
-            <IconButton
-              styles={styles}
-              variant="primary"
-              icon={<MapPin size={26} color={ui.text} weight="bold" />}
-              onPress={capture}
-              haptic="medium"
-            />
-          </Animated.View>
+          <View ref={captureAnchorRef} collapsable={false}>
+            <Animated.View style={{ transform: [{ scale: markerPulse }] }}>
+              <IconButton
+                styles={styles}
+                variant="primary"
+                icon={<MapPin size={26} color={ui.text} weight="bold" />}
+                onPress={capture}
+                haptic="medium"
+              />
+            </Animated.View>
+          </View>
           <IconButton
               styles={styles}
               icon={<StopIcon size={26} color={ui.text} weight="bold" />}
@@ -1253,6 +1400,7 @@ const generateSummary = async () => {
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
+<View ref={exportAnchorRef} collapsable={false}>
             {/* ESPORTA */}
             <IconButton
               styles={styles}
@@ -1268,7 +1416,9 @@ const generateSummary = async () => {
               onPress={onPressExport}
               haptic="light"
             />
+</View>
 
+<View ref={geminiAnchorRef} collapsable={false}>
             {/* GENERA RIEPILOGO (GEMINI) */}
             <IconButton
               styles={styles}
@@ -1286,6 +1436,7 @@ const generateSummary = async () => {
               onPress={generateSummary}
               haptic="light"
             />
+</View>
           </View>
         </View>
 
@@ -1471,6 +1622,18 @@ const generateSummary = async () => {
                       </Text>
                     </Pressable>
                   </View>
+
+                  <PillButton
+                    styles={styles}
+                    label="Rivedi tutorial"
+                    onPress={async () => {
+                      try { await AsyncStorage.removeItem(TOUR_FIRST_RUN_KEY); } catch {}
+                      startTour();
+                    }}
+                    variant="secondary"
+                    style={{ marginTop: 12 }}
+                    haptic="light"
+                  />
                 </Card>
 
         
@@ -1725,8 +1888,163 @@ const generateSummary = async () => {
         </View>
       </Modal>
 
+
+{/* TUTORIAL SPOTLIGHT */}
+<Modal visible={tourVisible} transparent animationType="fade" onRequestClose={skipTour}>
+  <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.65)" }}>
+    {tourStep === 0 ? (
+      (() => {
+        const step = tourSteps[0];
+        const isLast = tourSteps.length <= 1;
+        const tooltipW = Math.min(360, SCREEN_W - 32);
+
+        return (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
+            <View
+              style={{
+                width: tooltipW,
+                backgroundColor: ui.modal,
+                borderRadius: 22,
+                padding: 18,
+                borderWidth: 1,
+                borderColor: ui.border,
+              }}
+            >
+              <Text style={{ color: ui.text, fontWeight: "900", fontSize: 18, textAlign: "center" }}>
+                {step?.title}
+              </Text>
+              <Text style={{ marginTop: 10, color: ui.subtext, fontSize: 14, lineHeight: 20, textAlign: "center" }}>
+                {step?.text}
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+                <View style={{ flex: 1 }}>
+                  <PillButton
+                    styles={styles}
+                    label="Salta"
+                    onPress={skipTour}
+                    variant="secondary"
+                    haptic="none"
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <PillButton
+                    styles={styles}
+                    label={isLast ? "Fine" : "Inizia"}
+                    onPress={async () => {
+                      if (isLast) return finishTour();
+                      setTourStep(1);
+                    }}
+                    variant="primary"
+                    haptic="light"
+                  />
+                </View>
+              </View>
+
+              <Text style={{ marginTop: 12, color: ui.subtext, fontSize: 12, fontWeight: "800", textAlign: "center" }}>
+                1 / {tourSteps.length}
+              </Text>
+            </View>
+          </View>
+        );
+      })()
+    ) : tourRect ? (
+      <>
+        {/* Evidenzia elemento */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: Math.max(8, tourRect.x - 6),
+            top: Math.max(8, tourRect.y - 6),
+            width: tourRect.width + 12,
+            height: tourRect.height + 12,
+            borderRadius: 999,
+            borderWidth: 2,
+            borderColor: ui.primary,
+            shadowColor: "#000",
+            shadowOpacity: 0.35,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 8,
+          }}
+        />
+
+        {/* Tooltip */}
+        {(() => {
+          const step = tourSteps[tourStep];
+          const screenH = Dimensions.get("window").height;
+          const tooltipW = Math.min(340, SCREEN_W - 32);
+          const preferBelow = tourRect.y < screenH * 0.55;
+          const top = preferBelow
+            ? Math.min(screenH - 220, tourRect.y + tourRect.height + 18)
+            : Math.max(24, tourRect.y - 180);
+
+          const left = Math.min(SCREEN_W - tooltipW - 16, Math.max(16, tourRect.x + tourRect.width / 2 - tooltipW / 2));
+
+          const isLast = tourStep >= tourSteps.length - 1;
+
+          return (
+            <View
+              style={{
+                position: "absolute",
+                left,
+                top,
+                width: tooltipW,
+                backgroundColor: ui.modal,
+                borderRadius: 18,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: ui.border,
+              }}
+            >
+              <Text style={{ color: ui.text, fontWeight: "900", fontSize: 16 }}>
+                {step?.title}
+              </Text>
+              <Text style={{ marginTop: 6, color: ui.subtext, fontSize: 13, lineHeight: 18 }}>
+                {step?.text}
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <PillButton
+                    styles={styles}
+                    label="Salta"
+                    onPress={skipTour}
+                    variant="secondary"
+                    haptic="none"
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <PillButton
+                    styles={styles}
+                    label={isLast ? "Fine" : "Avanti"}
+                    onPress={async () => {
+                      if (isLast) return finishTour();
+                      setTourStep((s) => Math.min(s + 1, tourSteps.length - 1));
+                    }}
+                    variant="primary"
+                    haptic="light"
+                  />
+                </View>
+              </View>
+
+              <Text style={{ marginTop: 10, color: ui.subtext, fontSize: 12, fontWeight: "800" }}>
+                {tourStep + 1} / {tourSteps.length}
+              </Text>
+            </View>
+          );
+        })()}
+      </>
+    ) : null}
+  </View>
+</Modal>
+
       {/* BOTTOM BAR */}
       <View style={styles.bottomBar}>
+<View ref={homeAnchorRef} collapsable={false}>
         <IconButton
           styles={styles}
           flat
@@ -1735,7 +2053,9 @@ const generateSummary = async () => {
           onPress={() => setPage("home")}
           haptic="light"
         />
+</View>
 
+<View ref={settingsAnchorRef} collapsable={false}>
         <IconButton
           styles={styles}
           flat
@@ -1744,6 +2064,7 @@ const generateSummary = async () => {
           onPress={() => setPage("settings")}
           haptic="light"
         />
+</View>
       </View>
 
     </SafeAreaView>
