@@ -42,7 +42,7 @@ import {
   Vibration,
   View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 // Keep splash visible until app is ready
 SplashScreen.preventAutoHideAsync().catch(()=>{});
 
@@ -475,26 +475,21 @@ function Wheel({
 
 /* ---------- App ---------- */
 
-export default function App() {
+export default function HomeScreen() {
 
+  const insets = useSafeAreaInsets();
   const [showFakeSplash, setShowFakeSplash] = useState(true);
 
   // Splash screen handling - keep splash until app is ready
   useEffect(() => {
     let mounted = true;
-    async function prepare() {
+    (async () => {
       try {
-        // preload assets/fonts here if needed
-        await new Promise((res) => setTimeout(res, 400));
-      } catch (e) {
-        console.warn('Splash prepare error', e);
+        // se vuoi, qui puoi pre-caricare assets/font DAVVERO necessari
       } finally {
-        if (mounted) {
-          await SplashScreen.hideAsync().catch(()=>{});
-        }
+        if (mounted) await SplashScreen.hideAsync().catch(() => {});
       }
-    }
-    prepare();
+    })();
     return () => { mounted = false; };
   }, []);
 
@@ -1292,8 +1287,8 @@ const generateSummary = async () => {
                     <Image
             source={
               theme === "dark"
-                ? require("../../assets/images/header-dark.png")
-                : require("../../assets/images/header-light.png")
+                ? require("../assets/images/header-dark.png")
+                : require("../assets/images/header-light.png")
             }
             resizeMode="contain"
             style={styles.topBarLogo}
@@ -2057,8 +2052,16 @@ const generateSummary = async () => {
 </Modal>
 
       {/* BOTTOM BAR */}
-      <View style={styles.bottomBar}>
-<View ref={homeAnchorRef} collapsable={false}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            paddingBottom: Math.max(insets.bottom, 8),
+            height: 72 + insets.bottom,
+          },
+        ]}
+      >
+      <View ref={homeAnchorRef} collapsable={false}>
         <IconButton
           styles={styles}
           flat
@@ -2161,7 +2164,7 @@ function BreathingGlowSplash({ onDone }: { onDone: () => void }) {
           }}
         >
           <Image
-            source={require("../../assets/images/splash.png")}
+            source={require("../assets/images/splash.png")}
             style={{ width: "100%", height: "100%" }}
             resizeMode="contain"
           />

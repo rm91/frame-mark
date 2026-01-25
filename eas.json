@@ -6,7 +6,10 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "package": "com.tcmarkers.app.dev"
+      },
     },
     "preview": {
       "distribution": "internal",
