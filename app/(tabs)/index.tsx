@@ -476,6 +476,9 @@ function Wheel({
 /* ---------- App ---------- */
 
 export default function App() {
+
+  const [showFakeSplash, setShowFakeSplash] = useState(true);
+
   // Splash screen handling - keep splash until app is ready
   useEffect(() => {
     let mounted = true;
@@ -2067,9 +2070,96 @@ const generateSummary = async () => {
 </View>
       </View>
 
+      {showFakeSplash && (
+        <BreathingGlowSplash onDone={() => setShowFakeSplash(false)} />
+      )}
     </SafeAreaView>
   );
 }
+
+function BreathingGlowSplash({ onDone }: { onDone: () => void }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const glow = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    // breathing glow loop
+    const glowLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(glow, {
+          toValue: 0.6,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    glowLoop.start();
+
+    // end animation
+    const timeout = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1.04,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start(() => onDone());
+    }, 1800);
+
+    return () => {
+      glowLoop.stop();
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Animated.View
+        style={{
+          flex: 1,
+          backgroundColor: "#000",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity,
+        }}
+      >
+        <Animated.View
+          style={{
+            width: "70%",
+            maxWidth: 420,
+            aspectRatio: 1,
+            transform: [{ scale }],
+            shadowColor: "#FFD84A",
+            shadowOpacity: glow,
+            shadowRadius: 40,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 20,
+          }}
+        >
+          <Image
+            source={require("../../assets/images/splash.png")}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="contain"
+          />
+        </Animated.View>
+      </Animated.View>
+    </View>
+  );
+}
+
 
 /* ---------- Styles ---------- */
 
