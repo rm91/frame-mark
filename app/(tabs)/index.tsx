@@ -1177,9 +1177,9 @@ const generateSummary = async () => {
               variant="secondary"
               icon={
                 playing ? (
-                  <Pause size={28} color="#FFFFFF" weight="bold" />
+                  <Pause size={28} color={ui.text} weight="bold" />
                 ) : (
-                  <Play size={28} color="#FFFFFF" weight="bold" />
+                  <Play size={28} color={ui.text} weight="bold" />
                 )
               }
               onPress={playing ? stop : play}
@@ -1190,7 +1190,7 @@ const generateSummary = async () => {
             <IconButton
               styles={styles}
               variant="primary"
-              icon={<MapPin size={26} color="#FFFFFF" weight="bold" />}
+              icon={<MapPin size={26} color={ui.text} weight="bold" />}
               onPress={capture}
               haptic="medium"
             />
@@ -1261,7 +1261,7 @@ const generateSummary = async () => {
               icon={
                 <DownloadSimple
                   size={20}
-                  color="#FFFFFF"
+                  color={ui.text}
                   weight="bold"
                 />
               }
@@ -1278,7 +1278,7 @@ const generateSummary = async () => {
                 <Animated.View style={{ transform: [{ rotate: geminiRotate }] }}>
                   <Sparkle
                     size={20}
-                    color="#FFFFFF"
+                    color={ui.text}
                     weight="bold"
                   />
                 </Animated.View>
@@ -1731,7 +1731,7 @@ const generateSummary = async () => {
           styles={styles}
           flat
           size={48}
-          icon={<House size={22} color={ui.text} weight="bold" />}
+          icon={<House size={25} color={ui.text} weight="bold" />}
           onPress={() => setPage("home")}
           haptic="light"
         />
@@ -1740,7 +1740,7 @@ const generateSummary = async () => {
           styles={styles}
           flat
           size={48}
-          icon={<Gear size={22} color={ui.text} weight="bold" />}
+          icon={<Gear size={25} color={ui.text} weight="bold" />}
           onPress={() => setPage("settings")}
           haptic="light"
         />
