@@ -613,13 +613,24 @@ useEffect(() => {
   }
 
   const ref = step.ref?.current as any;
-  if (!ref?.measureInWindow) return;
+  // Use `measure` (pageX/pageY) instead of `measureInWindow` to avoid
+  // coordinate mismatches with Modal/status bar insets (Android).
+  if (!ref?.measure) return;
 
   let rAF: number | null = null;
   rAF = requestAnimationFrame(() => {
-    ref.measureInWindow((x: number, y: number, width: number, height: number) => {
-      if (width > 0 && height > 0) setTourRect({ x, y, width, height });
-    });
+    ref.measure(
+      (
+        _x: number,
+        _y: number,
+        width: number,
+        height: number,
+        pageX: number,
+        pageY: number
+      ) => {
+        if (width > 0 && height > 0) setTourRect({ x: pageX, y: pageY, width, height });
+      }
+    );
   });
 
   return () => {
