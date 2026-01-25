@@ -7,11 +7,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from "expo-status-bar";
 import {
   ArrowCounterClockwise,
+  ArrowLeft,
   FastForward,
   Gear,
   House,
   MapPin,
   Pause,
+  PencilSimple,
   Play,
   Rewind,
   Stop as StopIcon,
@@ -498,6 +500,8 @@ export default function App() {
 
   const [theme, setTheme] = useState<ThemeName>("dark");
   const [sortMode, setSortMode] = useState<"created" | "timecode">("timecode");
+
+  const [page, setPage] = useState<"home" | "settings">("home");
 
   // Start Timecode picker modal (HH:MM:SS:FF) - evita tastiera
   const [tcModalOpen, setTcModalOpen] = useState(false);
@@ -1078,6 +1082,7 @@ const generateSummary = async () => {
       {/* TOP BAR (logo left, FPS right) */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
+          {page === "home" ? (
           <Image
             source={
               theme === "dark"
@@ -1087,17 +1092,26 @@ const generateSummary = async () => {
             resizeMode="contain"
             style={styles.topBarLogo}
           />
-        </View>
+        ) : (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Pressable onPress={() => setPage("home")} hitSlop={10} style={{ paddingVertical: 4, paddingRight: 6 }}>
+              <ArrowLeft size={22} color={ui.text} weight="bold" />
+            </Pressable>
+            <Text style={{ color: ui.text, fontWeight: "900", fontSize: 16 }}>Impostazioni</Text>
+          </View>
+        )}</View>
 
         <View style={styles.topBarRight}>
           <Text style={styles.fpsBadgeText}>{fps} fps</Text>
         </View>
       </View>
 
+      {page === "home" ? (
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+
         
 
         {/* TIMECODE */}
@@ -1181,77 +1195,6 @@ const generateSummary = async () => {
           </View>
 </View>
 
-        {/* SETTINGS */}
-        <Card styles={styles}>
-          <Text style={styles.sectionTitle}>Impostazioni</Text>
-
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleText}>Tema scuro</Text>
-            <Switch
-              value={theme === "dark"}
-              onValueChange={(v) => setTheme(v ? "dark" : "light")}
-              trackColor={{
-                false: ui.border,
-                true: ui.primary,
-              }}
-              thumbColor={
-                Platform.OS === "android"
-                  ? theme === "dark"
-                    ? "#FFFFFF"
-                    : "#E5E7EB"
-                  : undefined
-              }
-            />
-          </View>
-          <Divider styles={styles} />
-
-          <View style={styles.field}>
-            <Text style={styles.label}>FPS</Text>
-
-            <View
-              style={{ flexDirection: "row", gap: 8, marginTop: 4 }}
-              pointerEvents={playing ? "none" : "auto"}
-            >
-              {[24, 25, 30].map((v) => {
-                const active = fps === v;
-
-                return (
-                  <Pressable
-                    key={v}
-                    onPress={() => changeFps(v)}
-                    disabled={playing}
-                    style={[
-                      styles.fpsRadio,
-                      active && styles.fpsRadioActive,
-                      playing && { opacity: 0.55 },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.fpsRadioText,
-                        active && styles.fpsRadioTextActive,
-                      ]}
-                    >
-                      {v}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Start Timecode</Text>
-            <Pressable onPress={openTcModal} style={styles.input}>
-              <Text style={{ color: ui.text, fontWeight: "900" }}>{startTC}</Text>
-              <Text style={{ color: ui.subtext, marginTop: 4, fontSize: 12 }}>
-                Tocca per impostare (HH:MM:SS:FF)
-              </Text>
-            </Pressable>
-          </View>
-        </Card>
-
         {/* MARKERS */}
         <Card styles={styles}>
           <View style={styles.markerHeader}>
@@ -1328,7 +1271,22 @@ const generateSummary = async () => {
                 </Text>
               </View>
 
-              <Text style={styles.editLink}>Modifica</Text>
+              <IconButton
+                styles={styles}
+                size={36}
+                icon={
+                  <PencilSimple
+                    size={20}
+                    color={ui.primary}
+                    weight="bold"
+                  />
+                }
+                onPress={() => {
+                  setEditing(m);
+                  setComment(m.comment);
+                }}
+                haptic="light"
+              />
             </TouchableOpacity>
           ))}
 
@@ -1367,7 +1325,81 @@ const generateSummary = async () => {
             </View>
           )}
         </Card>
+            </ScrollView>
+    ) : (
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+
+        {/* SETTINGS */}
+                  <View style={styles.toggleRow}>
+                    <Text style={styles.toggleText}>Tema scuro</Text>
+                    <Switch
+                      value={theme === "dark"}
+                      onValueChange={(v) => setTheme(v ? "dark" : "light")}
+                      trackColor={{
+                        false: ui.border,
+                        true: ui.primary,
+                      }}
+                      thumbColor={
+                        Platform.OS === "android"
+                          ? theme === "dark"
+                            ? "#FFFFFF"
+                            : "#E5E7EB"
+                          : undefined
+                      }
+                    />
+                  </View>
+                  <Divider styles={styles} />
+
+                  <View style={styles.field}>
+                    <Text style={styles.label}>FPS</Text>
+
+                    <View
+                      style={{ flexDirection: "row", gap: 8, marginTop: 4 }}
+                      pointerEvents={playing ? "none" : "auto"}
+                    >
+                      {[24, 25, 30].map((v) => {
+                        const active = fps === v;
+
+                        return (
+                          <Pressable
+                            key={v}
+                            onPress={() => changeFps(v)}
+                            disabled={playing}
+                            style={[
+                              styles.fpsRadio,
+                              active && styles.fpsRadioActive,
+                              playing && { opacity: 0.55 },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.fpsRadioText,
+                                active && styles.fpsRadioTextActive,
+                              ]}
+                            >
+                              {v}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <Divider styles={styles} />
+                  <View style={styles.field}>
+                    <Text style={styles.label}>Start Timecode</Text>
+                    <Pressable onPress={openTcModal} style={styles.input}>
+                      <Text style={{ color: ui.text, fontWeight: "900" }}>{startTC}</Text>
+                      <Text style={{ color: ui.subtext, marginTop: 4, fontSize: 12 }}>
+                        Tocca per impostare (HH:MM:SS:FF)
+                      </Text>
+                    </Pressable>
+                  </View>     
       </ScrollView>
+    )}
 
 
       {/* MODAL NOME FILE (Android e fallback) */}
@@ -1560,9 +1592,7 @@ const generateSummary = async () => {
           flat
           size={48}
           icon={<House size={22} color={ui.text} weight="bold" />}
-          onPress={() => {
-            // TODO: navigazione Home
-          }}
+          onPress={() => setPage("home")}
           haptic="light"
         />
 
@@ -1571,9 +1601,7 @@ const generateSummary = async () => {
           flat
           size={48}
           icon={<Gear size={22} color={ui.text} weight="bold" />}
-          onPress={() => {
-            // TODO: navigazione Impostazioni
-          }}
+          onPress={() => setPage("settings")}
           haptic="light"
         />
       </View>
