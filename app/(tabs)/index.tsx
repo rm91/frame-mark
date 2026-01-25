@@ -23,10 +23,10 @@ import {
 } from "phosphor-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActionSheetIOS,
   Alert,
   Animated,
   Dimensions,
+  Easing,
   FlatList,
   Image,
   Modal,
@@ -513,6 +513,17 @@ export default function App() {
   const [tcS, setTcS] = useState(0);
   const [tcF, setTcF] = useState(0);
 
+  // Export picker modal (chiudibile senza scelta)
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const closeExportModal = () => setExportModalVisible(false);
+  const chooseExport = async (kind: "txt" | "pdf" | "clip") => {
+    closeExportModal();
+    if (kind === "txt") return exportMarkers();
+    if (kind === "pdf") return exportMarkersPdf();
+    return copyMarkersToClipboard();
+  };
+
+
   const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
   const openTcModal = () => {
@@ -541,6 +552,40 @@ export default function App() {
 
   const [summary, setSummary] = useState("");
   const [loadingSummary, setLoadingSummary] = useState(false);
+
+  // Gemini icon spinner while summary is generating
+  const geminiSpin = useRef(new Animated.Value(0)).current;
+  const geminiSpinLoop = useRef<Animated.CompositeAnimation | null>(null);
+
+  const geminiRotate = geminiSpin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  useEffect(() => {
+    if (loadingSummary) {
+      geminiSpinLoop.current?.stop();
+      geminiSpin.setValue(0);
+
+      geminiSpinLoop.current = Animated.loop(
+        Animated.timing(geminiSpin, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+
+      geminiSpinLoop.current.start();
+    } else {
+      geminiSpinLoop.current?.stop();
+      geminiSpin.setValue(0);
+    }
+
+    return () => {
+      geminiSpinLoop.current?.stop();
+    };
+  }, [loadingSummary, geminiSpin]);
 
   const raf = useRef<number | null>(null);
   const startMs = useRef(0);
@@ -975,28 +1020,7 @@ const capture = () => {
       Alert.alert("Export", "Nessun marker da esportare.");
       return;
     }
-
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          title: "Esporta markers",
-          options: ["Annulla", "TXT", "PDF", "Copia negli appunti"],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) exportMarkers();
-          if (buttonIndex === 2) exportMarkersPdf();
-          if (buttonIndex === 3) copyMarkersToClipboard();
-        }
-      );
-    } else {
-      Alert.alert("Esporta markers", "Scegli l’azione:", [
-        { text: "TXT", onPress: exportMarkers },
-        { text: "PDF", onPress: exportMarkersPdf },
-        { text: "Copia negli appunti", onPress: copyMarkersToClipboard },
-        { text: "Annulla", style: "cancel" },
-      ]);
-    }
+    setExportModalVisible(true);
   };
 
   /* ---------- GEMINI SUMMARY ---------- */
@@ -1228,15 +1252,16 @@ const generateSummary = async () => {
             <Text style={styles.count}>{markers.length}</Text>
           </View>
 
-          <View style={{ flexDirection: "row", gap: 6 }}>
+          <View style={{ flexDirection: "row", gap: 10 }}>
             {/* ESPORTA */}
             <IconButton
               styles={styles}
-              size={36}
+              variant="secondary"
+              disabled={markers.length === 0}
               icon={
                 <DownloadSimple
                   size={20}
-                  color={ui.primary}
+                  color="#FFFFFF"
                   weight="bold"
                 />
               }
@@ -1244,19 +1269,21 @@ const generateSummary = async () => {
               haptic="light"
             />
 
-            {/* GENERA RIEPILOGO */}
+            {/* GENERA RIEPILOGO (GEMINI) */}
             <IconButton
               styles={styles}
-              size={36}
+              variant="secondary"
+              disabled={markers.length === 0 || loadingSummary}
               icon={
-                <Sparkle
-                  size={20}
-                  color={ui.primary}
-                  weight="bold"
-                />
+                <Animated.View style={{ transform: [{ rotate: geminiRotate }] }}>
+                  <Sparkle
+                    size={20}
+                    color="#FFFFFF"
+                    weight="bold"
+                  />
+                </Animated.View>
               }
               onPress={generateSummary}
-              disabled={loadingSummary || markers.length === 0}
               haptic="light"
             />
           </View>
@@ -1597,6 +1624,70 @@ const generateSummary = async () => {
           </View>
         </View>
       </Modal>
+
+      {/* MODAL EXPORT (chiudibile senza scelta) */}
+      <Modal
+        visible={exportModalVisible}
+        transparent
+        animationType="fade"
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
+        onRequestClose={closeExportModal}
+      >
+        {/* tappando sul backdrop chiudi */}
+        <Pressable style={styles.modalBg} onPress={closeExportModal}>
+          {/* tap dentro NON chiude */}
+          <Pressable style={styles.modal} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Esporta markers</Text>
+              <TouchableOpacity onPress={closeExportModal} hitSlop={10}>
+                <Text style={styles.close}>Chiudi</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Scegli un formato oppure chiudi.
+            </Text>
+
+            <PillButton
+              styles={styles}
+              label="TXT"
+              onPress={() => chooseExport("txt")}
+              variant="primary"
+              style={{ marginTop: 10 }}
+              haptic="light"
+            />
+
+            <PillButton
+              styles={styles}
+              label="PDF"
+              onPress={() => chooseExport("pdf")}
+              variant="secondary"
+              style={{ marginTop: 10 }}
+              haptic="light"
+            />
+
+            <PillButton
+              styles={styles}
+              label="Copia negli appunti"
+              onPress={() => chooseExport("clip")}
+              variant="secondary"
+              style={{ marginTop: 10 }}
+              haptic="light"
+            />
+
+            <PillButton
+              styles={styles}
+              label="Annulla"
+              onPress={closeExportModal}
+              variant="secondary"
+              style={{ marginTop: 10 }}
+              haptic="none"
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
 
       {/* MODAL COMMENTO */}
       <Modal visible={!!editing} transparent animationType="fade">
