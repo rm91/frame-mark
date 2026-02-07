@@ -827,6 +827,22 @@ const skipTour = async () => {
     setSummary("");
   };
 
+  const confirmReset = () => {
+    Alert.alert(
+      "Conferma reset",
+      "Procedendo verranno cancellati tutti i markers. Sei sicuro di procedere?",
+      [
+        { text: "Annulla", style: "cancel" },
+        {
+          text: "Conferma",
+          style: "destructive",
+          onPress: () => reset(),
+        },
+      ]
+    );
+  };
+
+
   const adjust = (deltaSeconds: number) => {
     setFrames((f) => Math.max(0, f + deltaSeconds * fps));
   };
@@ -1362,9 +1378,10 @@ const generateSummary = async () => {
               styles={styles}
               variant="secondary"
               icon={<ArrowCounterClockwise size={24} color={ui.text} weight="bold" />}
-              onPress={reset}
+              onPress={confirmReset}
               haptic="light"
             />
+
           </View>
 
           {/* Nudge controls */}

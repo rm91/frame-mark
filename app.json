@@ -5,16 +5,20 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/frame-mark-icon.png",
-    "scheme": "myapp",
+    "scheme": "roughmind-framemark",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "io.roughmind.framemark",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.tcmarkers.app"
+      "package": "io.roughmind.framemark"
     },
     "web": {
       "output": "static",
@@ -41,6 +45,6 @@
         "projectId": "9c0874e4-053a-43ab-aca3-82e608051181"
       }
     },
-    "owner": "misuraca.r"
+    "owner": "roughmind"
   }
 }
