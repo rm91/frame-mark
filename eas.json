@@ -9,7 +9,7 @@
       "distribution": "internal",
       "android": {
         "package": "com.tcmarkers.app.dev"
-      },
+      }
     },
     "preview": {
       "distribution": "internal",
