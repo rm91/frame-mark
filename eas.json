@@ -8,20 +8,28 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "package": "com.tcmarkers.app.dev"
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
       }
     },
     "preview": {
       "distribution": "internal",
-	  "android": {
+      "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
       }
     },
     "production": {
-      "developmentClient": false,
       "distribution": "store",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "simulator": false
       }
     }
   },
